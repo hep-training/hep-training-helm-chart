@@ -3,7 +3,11 @@
 set -euo pipefail # stop when error occurs
 
 # ======================== CONFIGURATION ========================
-source .env # import variables
+readonly HEP_TRAINING_PATH="/home/valentin/HEPTraining"
+readonly GITHUB_USERNAME="valentinryckaert"
+readonly IMAGE_NAME="tess-private-spaces"
+readonly IMAGE_TAG="uiux"
+readonly DOCKER_REGISTRY="ghcr.io"
 readonly IMAGE_FULL="$DOCKER_REGISTRY/$GITHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
 
 # ======================== COLORS ========================
@@ -35,16 +39,19 @@ usage() {
 Usage: $0 <command> [options]
 
 Commands:
-    install                   Install the application
-    upgrade                   Upgrade the application
+    install                     Install the application
+    upgrade                     Upgrade the application
+    copy-ror-config, crc        Copy config files from HEP Training repository
+    uninstall                   Uninstall the application
 
-Options:
-    --copy-ror-config, -crc   Copy config files from HEP Training repository
-    --help, -h                Show this help message
+Options: 
+    --help, -h                  Show this help message
 
 Examples:
-    $0 install --copy-ror-config
-    $0 upgrade --copy-ror-config
+    $0 install
+    $0 upgrade
+    $0 crc
+    $0 uninstall
 EOF
 }
 
@@ -119,8 +126,10 @@ copy_config() {
     fi
 
     success "Configuration files copied."
+}
 
-    # Create Kubernetes secrets
+create_kubernetes_secrets() {
+
     info "Creating Kubernetes secrets..."
 
     if ! kubectl create secret generic app-secrets-env \
@@ -196,7 +205,8 @@ check_values_file() {
 
 # Installs the application
 install_app() {
-    local copy_config_flag="$1"
+
+    sed -i "s/EXEC_TYPE/rake db:setup/g" templates/app-setup-job.yaml
 
     info "Starting installation..."
 
@@ -205,37 +215,42 @@ install_app() {
 
     build_and_push_docker
 
-    if [ "$copy_config_flag" = "true" ]; then
-        copy_config
-    fi
-
     info "Running Helm installation..."
     if ! helm install tess . -f values.yaml; then
         error "Error during Helm installation"
     fi
+
+    sed -i "s/rake db:setup/EXEC_TYPE/g" templates/app-setup-job.yaml
 
     success "Application installed successfully!"
 }
 
 # Upgrades the application
 upgrade_app() {
-    local copy_config_flag="$1"
+
+    sed -i "s/EXEC_TYPE/rails db:migrate/g" templates/app-setup-job.yaml
 
     info "Starting upgrade..."
 
     check_values_file
     check_prerequisites
 
-    if [ "$copy_config_flag" = "true" ]; then
-        copy_config
-    fi
-
     info "Running Helm upgrade..."
     if ! helm upgrade tess . -f values.yaml; then
         error "Error during Helm upgrade"
     fi
 
+    sed -i "s/rails db:migrate/EXEC_TYPE/g" templates/app-setup-job.yaml
+
     success "Application upgraded successfully!"
+}
+
+uninstall_app() {
+    info "Stopping application..."
+    if ! helm uninstall tess; then
+        error "Error during Helm upgrade"
+    fi
+    success "Application stopped successfully!"
 }
 
 # ======================== MAIN ========================
@@ -248,34 +263,20 @@ main() {
     fi
 
     local command="$1"
-    shift || true
-
-    local copy_config_flag="false"
-
-    # Process arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --copy-ror-config|-crc)
-                copy_config_flag="true"
-                ;;
-            --help|-h)
-                usage
-                exit 0
-                ;;
-            *)
-                error "Unknown option: $1"
-                ;;
-        esac
-        shift || true
-    done
 
     # Execute the appropriate command
     case "$command" in
         install)
-            install_app "$copy_config_flag"
+            install_app
             ;;
         upgrade)
-            upgrade_app "$copy_config_flag"
+            upgrade_app
+            ;;
+        copy-ror-config|crc)
+            copy_config
+            ;;
+        uninstall)
+            uninstall_app
             ;;
         --help|-h)
             usage
