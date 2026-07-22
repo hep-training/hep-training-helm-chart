@@ -20,7 +20,7 @@ spec:
               done &&
 
               echo "Running migrations..." &&
-              bundle exec rails db:migrate &&
+              bundle exec EXEC_TYPE &&
               bundle exec rake tmp:clear &&
 
               echo "Reindexing Solr..." &&
@@ -31,6 +31,8 @@ spec:
           env:
             - name: RAILS_ENV
               value: production
+            - name: DISABLE_DATABASE_ENVIRONMENT_CHECK
+              value: "1"
           volumeMounts:
           - name: sidekiq-uploads
             mountPath: /code/public/system
