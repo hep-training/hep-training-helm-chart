@@ -234,6 +234,7 @@ upgrade_app() {
 
     check_values_file
     check_prerequisites
+    create_kubernetes_secrets
 
     info "Running Helm upgrade..."
     if ! helm upgrade tess . -f values.yaml; then
