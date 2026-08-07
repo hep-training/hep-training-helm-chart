@@ -3,10 +3,10 @@
 set -euo pipefail # stop when error occurs
 
 # ======================== CONFIGURATION ========================
-readonly HEP_TRAINING_PATH="../TeSS-private-spaces/"
-readonly GITHUB_USERNAME="valentinryckaert"
-readonly IMAGE_NAME="heptraining-private-spaces"
-readonly IMAGE_TAG="prod"
+readonly HEP_TRAINING_PATH="/path/to/your/hep-training/repo"
+readonly GITHUB_USERNAME="GITHUB_USERNAME"
+readonly IMAGE_NAME="IMAGE_NAME"
+readonly IMAGE_TAG="IMAGE_TAG"
 readonly DOCKER_REGISTRY="ghcr.io"
 readonly IMAGE_FULL="$DOCKER_REGISTRY/$GITHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
 
